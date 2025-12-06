@@ -7,15 +7,25 @@
 
 <div class="coord" id="coord">[0,0,0]</div>
 <div class="status" id="status">Ready</div>
-<div class="help">WASD:XY QE:Z ^S:Save ^I:AI ^L:Login</div>
+<div class="help">WASD:XY QE:Z ^S:Save ^I:AI</div>
 
 <div id="auth" class="modal">
-  <h2>🔐 Setup</h2>
-  <input id="inp_token" placeholder="GitHub Token (ghp_...)">
-  <input id="inp_repo" placeholder="owner/repo">
-  <input id="inp_key" placeholder="Claude Key (sk-ant-...)">
-  <button id="btn_save">Save & Start</button>
-  <p class="hint">Get tokens from github.com/settings/tokens & console.anthropic.com</p>
+  <h2>🧊 Claude Code 3D</h2>
+  <p class="repo" id="repo">Repo: detecting...</p>
+
+  <div class="auth-step">
+    <span class="check" id="chk_gh">○</span>
+    <a id="btn_gh" href="#" target="_blank">Login with GitHub</a>
+    <input id="inp_gh" placeholder="paste token here" class="hidden">
+  </div>
+
+  <div class="auth-step">
+    <span class="check" id="chk_cl">○</span>
+    <a id="btn_cl" href="#" target="_blank">Get Claude API Key</a>
+    <input id="inp_cl" placeholder="paste key here" class="hidden">
+  </div>
+
+  <button id="btn_save" class="hidden">Start Coding →</button>
 </div>
 
 <div class="cube">
@@ -32,21 +42,42 @@
 
 <script type="module">
 import { App } from './src/app.js';
-
 const app = new App();
 
-// Auth UI
+// Show detected repo
+const repo = app.auth.getRepo();
+document.getElementById('repo').textContent = repo ? `Repo: ${repo}` : 'Repo: set manually below';
+
+// Set OAuth URLs
+document.getElementById('btn_gh').href = app.auth.gitHubTokenUrl();
+document.getElementById('btn_cl').href = app.auth.anthropicUrl();
+
+// Show/hide based on auth state
+const updateUI = () => {
+  const hasGh = app.auth.hasGitHub();
+  const hasCl = app.auth.hasClaude();
+  document.getElementById('chk_gh').textContent = hasGh ? '✓' : '○';
+  document.getElementById('chk_cl').textContent = hasCl ? '✓' : '○';
+  document.getElementById('inp_gh').classList.toggle('hidden', hasGh);
+  document.getElementById('inp_cl').classList.toggle('hidden', hasCl);
+  document.getElementById('btn_save').classList.toggle('hidden', !(hasGh && hasCl));
+};
+updateUI();
+
+// Save tokens on paste
+document.getElementById('inp_gh').onchange = e => { app.auth.setGitHub(e.target.value); updateUI(); };
+document.getElementById('inp_cl').onchange = e => { app.auth.setClaude(e.target.value); updateUI(); };
+
+// Start button
 document.getElementById('btn_save').onclick = () => {
-  app.auth.setGitHub(document.getElementById('inp_token').value);
-  app.auth.setRepo(document.getElementById('inp_repo').value);
-  app.auth.setClaude(document.getElementById('inp_key').value);
-  location.reload();
+  document.getElementById('auth').classList.add('hidden');
+  app.init();
 };
 
-// Check auth & init
+// Auto-start if ready
 if (app.auth.isReady()) {
   document.getElementById('auth').classList.add('hidden');
+  app.init();
 }
-app.init();
 </script>
 </body></html>

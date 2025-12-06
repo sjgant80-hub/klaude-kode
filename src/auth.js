@@ -1,45 +1,50 @@
-// 🔐 Auth - Browser OAuth flows for GitHub & Anthropic
-const GH_AUTH = 'https://github.com/login/oauth/authorize';
-const GH_SCOPE = 'repo';
+// 🔐 Auth - Browser OAuth with auto-detect
+const GH_OAUTH = 'https://github.com/login/oauth/authorize';
+const GH_TOKEN_URL = 'https://github.com/settings/tokens/new';
+const ANT_CONSOLE = 'https://console.anthropic.com/settings/keys';
 
 export class Auth {
   constructor() {
-    this.storage = window.localStorage;
+    this.ls = window.localStorage;
+    this.repo = this.detectRepo();
   }
 
-  // Check if authenticated
-  hasGitHub() { return !!this.storage.getItem('gh_token'); }
-  hasClaude() { return !!this.storage.getItem('ant_key'); }
-  isReady() { return this.hasGitHub() && this.hasClaude(); }
+  // Auto-detect repo from GitHub Pages URL
+  detectRepo() {
+    const cached = this.ls.getItem('gh_repo');
+    if (cached) return cached;
 
-  // GitHub OAuth popup flow
-  loginGitHub(clientId, redirect) {
-    const state = crypto.randomUUID();
-    this.storage.setItem('gh_state', state);
-    const url = `${GH_AUTH}?client_id=${clientId}&redirect_uri=${redirect}&scope=${GH_SCOPE}&state=${state}`;
-    window.open(url, 'gh_auth', 'width=600,height=700');
-  }
+    const h = window.location.hostname;
+    const p = window.location.pathname.split('/')[1];
 
-  // Handle OAuth callback
-  handleCallback() {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const state = params.get('state');
-    if (code && state === this.storage.getItem('gh_state')) {
-      return code; // Exchange for token server-side or via proxy
+    // username.github.io/repo-name
+    if (h.endsWith('.github.io')) {
+      const user = h.replace('.github.io', '');
+      const repo = p || `${user}.github.io`;
+      this.ls.setItem('gh_repo', `${user}/${repo}`);
+      return `${user}/${repo}`;
     }
     return null;
   }
 
-  // Manual token entry (fallback)
-  setGitHub(token) { this.storage.setItem('gh_token', token); }
-  setClaude(key) { this.storage.setItem('ant_key', key); }
-  setRepo(repo) { this.storage.setItem('gh_repo', repo); }
+  // Auth status
+  hasGitHub() { return !!this.ls.getItem('gh_token'); }
+  hasClaude() { return !!this.ls.getItem('ant_key'); }
+  isReady() { return this.hasGitHub() && this.hasClaude(); }
+  getRepo() { return this.repo; }
+
+  // OAuth URLs
+  gitHubTokenUrl() {
+    return `${GH_TOKEN_URL}?scopes=repo&description=Claude-Code-3D`;
+  }
+  anthropicUrl() { return ANT_CONSOLE; }
+
+  // Set tokens after OAuth
+  setGitHub(token) { this.ls.setItem('gh_token', token); }
+  setClaude(key) { this.ls.setItem('ant_key', key); }
 
   // Clear auth
   logout() {
-    ['gh_token', 'ant_key', 'gh_repo', 'gh_state'].forEach(k =>
-      this.storage.removeItem(k)
-    );
+    ['gh_token', 'ant_key'].forEach(k => this.ls.removeItem(k));
   }
 }
