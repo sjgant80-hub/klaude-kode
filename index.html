@@ -2,22 +2,21 @@
 <html><head>
 <meta charset="UTF-8">
 <title>🧊 Claude Code 3D</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#000;color:#0f0;font:12px monospace}
-.cube{display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);height:100vh;gap:2px}
-.cell{border:1px solid #0f0;padding:4px;overflow:auto;position:relative}
-.cell:hover{border-color:#0ff}
-.center{background:#001100}
-#ed{width:100%;height:100%;background:#000;color:#0f0;border:none;resize:none;font:inherit}
-.coord{position:fixed;top:4px;right:4px;color:#0f0}
-.status{position:fixed;bottom:4px;left:4px;color:#0f0}
-.help{position:fixed;bottom:4px;right:4px;color:#060;font-size:10px}
-</style>
+<link rel="stylesheet" href="styles.css">
 </head><body>
+
 <div class="coord" id="coord">[0,0,0]</div>
 <div class="status" id="status">Ready</div>
-<div class="help">WASD:XY QE:Z Ctrl+S:Save Ctrl+I:AI</div>
+<div class="help">WASD:XY QE:Z ^S:Save ^I:AI ^L:Login</div>
+
+<div id="auth" class="modal">
+  <h2>🔐 Setup</h2>
+  <input id="inp_token" placeholder="GitHub Token (ghp_...)">
+  <input id="inp_repo" placeholder="owner/repo">
+  <input id="inp_key" placeholder="Claude Key (sk-ant-...)">
+  <button id="btn_save">Save & Start</button>
+  <p class="hint">Get tokens from github.com/settings/tokens & console.anthropic.com</p>
+</div>
 
 <div class="cube">
   <div class="cell" id="c0"></div>
@@ -31,118 +30,23 @@ body{background:#000;color:#0f0;font:12px monospace}
   <div class="cell" id="c8"></div>
 </div>
 
-<script>
-// 🧊 CLAUDE CODE 3D - ENTIRE IDE
-const API_GH='https://api.github.com';
-const API_CL='https://api.anthropic.com/v1/messages';
+<script type="module">
+import { App } from './src/app.js';
 
-// State
-let [x,y,z]=[0,0,0];
-let repo=localStorage.getItem('gh_repo')||'';
-const cache=new Map();
+const app = new App();
 
-// ⚡ GitOps
-const gh={
-  tok:()=>localStorage.getItem('gh_token'),
-  hdr(){return{'Authorization':`token ${this.tok()}`,'Accept':'application/vnd.github.v3+json'}},
-  async get(p){
-    const r=await fetch(`${API_GH}/repos/${repo}/contents/${p}`,{headers:this.hdr()});
-    if(!r.ok)return'';
-    const d=await r.json();
-    return atob(d.content);
-  },
-  async put(p,c,m='Update'){
-    let sha;
-    try{const r=await fetch(`${API_GH}/repos/${repo}/contents/${p}`,{headers:this.hdr()});sha=(await r.json()).sha}catch{}
-    return fetch(`${API_GH}/repos/${repo}/contents/${p}`,{
-      method:'PUT',headers:this.hdr(),
-      body:JSON.stringify({message:m,content:btoa(c),sha})
-    });
-  }
+// Auth UI
+document.getElementById('btn_save').onclick = () => {
+  app.auth.setGitHub(document.getElementById('inp_token').value);
+  app.auth.setRepo(document.getElementById('inp_repo').value);
+  app.auth.setClaude(document.getElementById('inp_key').value);
+  location.reload();
 };
 
-// 🤖 ClaudeNode
-const cl={
-  key:()=>localStorage.getItem('ant_key'),
-  async q(t,c){
-    const r=await fetch(API_CL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':this.key(),'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({model:'claude-3-haiku-20240307',max_tokens:4000,messages:[{role:'user',content:`${t}\n${c}`}]})
-    });
-    return(await r.json()).content[0].text;
-  }
-};
-
-// 🧊 CodeArray (sparse)
-const grid={
-  k:(x,y,z)=>`${x},${y},${z}`,
-  get(x,y,z){return cache.get(this.k(x,y,z))||''},
-  set(x,y,z,v){cache.set(this.k(x,y,z),v)}
-};
-
-// UI
-const $=id=>document.getElementById(id);
-const path=()=>`${x}/${y}/${z}.js`;
-const updateCoord=()=>$('coord').textContent=`[${x},${y},${z}]`;
-const status=s=>{$('status').textContent=s;setTimeout(()=>$('status').textContent='Ready',2000)};
-
-// Load file at coords
-async function load(){
-  updateCoord();
-  status('Loading...');
-  let code=grid.get(x,y,z);
-  if(!code&&repo){
-    code=await gh.get(path());
-    grid.set(x,y,z,code);
-  }
-  $('ed').value=code;
-  loadNeighbors();
-  status('Loaded');
+// Check auth & init
+if (app.auth.isReady()) {
+  document.getElementById('auth').classList.add('hidden');
 }
-
-// Load neighboring cells preview
-async function loadNeighbors(){
-  const offs=[[-1,1],[0,1],[1,1],[-1,0],[0,0],[1,0],[-1,-1],[0,-1],[1,-1]];
-  offs.forEach(([dx,dy],i)=>{
-    if(i===4)return;
-    const code=grid.get(x+dx,y+dy,z);
-    $('c'+i).textContent=code?code.slice(0,100)+'...':'[empty]';
-  });
-}
-
-// Save with optional AI
-async function save(ai=false){
-  status(ai?'AI improving...':'Saving...');
-  let code=$('ed').value;
-  if(ai)code=await cl.q('improve this code:',code);
-  if(repo)await gh.put(path(),code,'Claude edit');
-  grid.set(x,y,z,code);
-  $('ed').value=code;
-  status('Saved');
-}
-
-// Navigation
-const nav=(dx,dy,dz)=>{x+=dx;y+=dy;z+=dz;load()};
-
-// Keyboard
-document.onkeydown=e=>{
-  if(!e.ctrlKey)return;
-  e.preventDefault();
-  switch(e.key.toLowerCase()){
-    case's':save();break;
-    case'i':save(true);break;
-    case'w':nav(0,1,0);break;
-    case'a':nav(-1,0,0);break;
-    case'd':nav(1,0,0);break;
-    case'x':nav(0,-1,0);break;
-    case'q':nav(0,0,-1);break;
-    case'e':nav(0,0,1);break;
-  }
-};
-
-// Init
-load();
-console.log('🧊 Claude Code 3D Ready!\nSet: localStorage.setItem("gh_token","ghp_..."); localStorage.setItem("gh_repo","user/repo"); localStorage.setItem("ant_key","sk-ant-...")');
+app.init();
 </script>
 </body></html>
