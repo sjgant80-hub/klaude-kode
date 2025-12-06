@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>📁 Files - Claude Code 3D</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="../styles/files.css">
+</head><body>
+
+<div class="page">
+  <h1>📁 File Browser</h1>
+  <p class="repo" id="repo">Repo: loading...</p>
+
+  <div class="file-tree" id="tree">Loading...</div>
+
+  <div class="file-actions">
+    <button id="btn_new">+ New File</button>
+    <button id="btn_refresh">↻ Refresh</button>
+  </div>
+
+  <nav class="nav">
+    <a href="editor.html">Editor</a>
+    <a href="settings.html">Settings</a>
+  </nav>
+</div>
+
+<script type="module">
+import { Auth } from '../src/auth.js';
+import { GitOps } from '../src/git-ops.js';
+
+const auth = new Auth();
+if (!auth.isReady()) location.href = 'auth.html';
+
+const gh = new GitOps(localStorage.gh_token, auth.getRepo());
+const $ = id => document.getElementById(id);
+
+$('repo').textContent = `Repo: ${auth.getRepo()}`;
+
+async function loadTree() {
+  $('tree').innerHTML = 'Loading...';
+  try {
+    const res = await fetch(`https://api.github.com/repos/${auth.getRepo()}/git/trees/main?recursive=1`, {
+      headers: { 'Authorization': `token ${localStorage.gh_token}` }
+    });
+    const data = await res.json();
+    const files = data.tree?.filter(f => f.type === 'blob') || [];
+    $('tree').innerHTML = files.map(f =>
+      `<div class="file-item" onclick="go('${f.path}')">${f.path}</div>`
+    ).join('') || 'No files';
+  } catch(e) {
+    $('tree').innerHTML = 'Error loading files';
+  }
+}
+
+window.go = path => {
+  const [x,y,z] = path.split('/').map(p => parseInt(p) || 0);
+  localStorage.setItem('nav_pos', JSON.stringify([x,y,z]));
+  location.href = 'editor.html';
+};
+
+$('btn_refresh').onclick = loadTree;
+$('btn_new').onclick = () => location.href = 'editor.html';
+
+loadTree();
+</script>
+</body></html>

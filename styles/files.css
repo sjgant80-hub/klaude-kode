@@ -1,0 +1,6 @@
+/* 📁 File Browser Styles */
+.file-tree{max-height:50vh;overflow:auto;border:1px solid #0f0;margin:16px 0;text-align:left}
+.file-item{padding:8px 12px;border-bottom:1px solid #030;cursor:pointer}
+.file-item:hover{background:#001100;color:#0ff}
+.file-actions{display:flex;gap:8px;margin:16px 0}
+.file-actions button{flex:1}

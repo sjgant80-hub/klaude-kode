@@ -1,0 +1,9 @@
+/* 🧊 Editor Styles */
+.cube{display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);height:100vh;gap:2px}
+.cell{border:1px solid #0f0;padding:4px;overflow:auto}
+.cell:hover{border-color:#0ff}
+.center{background:#001100}
+#ed{width:100%;height:100%;background:#000;color:#0f0;border:none;resize:none;font:inherit}
+.coord{position:fixed;top:4px;right:4px}
+.status{position:fixed;bottom:4px;left:4px}
+.help{position:fixed;bottom:4px;right:4px;color:#060;font-size:10px}

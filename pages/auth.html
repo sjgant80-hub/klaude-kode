@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>🔐 Login - Claude Code 3D</title>
+<link rel="stylesheet" href="../styles.css">
+</head><body>
+
+<div class="page auth-page">
+  <h1>🧊 Claude Code 3D</h1>
+  <p class="repo" id="repo">Repo: detecting...</p>
+
+  <a id="btn_gh" href="#" target="_blank" class="btn-login">Login with GitHub →</a>
+  <input id="inp_gh" placeholder="paste token & press Enter">
+
+  <p class="optional">Optional: Enable AI features</p>
+  <input id="inp_cl" placeholder="Claude API key (sk-ant-...)">
+
+  <button id="btn_start" class="hidden">Enter Editor →</button>
+
+  <nav class="nav">
+    <a href="../index.html">Home</a>
+    <a href="settings.html">Settings</a>
+  </nav>
+</div>
+
+<script type="module">
+import { Auth } from '../src/auth.js';
+const auth = new Auth();
+const $ = id => document.getElementById(id);
+
+$('repo').textContent = auth.getRepo() ? `Repo: ${auth.getRepo()}` : 'Local mode';
+$('btn_gh').href = auth.gitHubTokenUrl();
+
+const update = () => {
+  const ok = auth.hasGitHub();
+  $('inp_gh').classList.toggle('hidden', ok);
+  $('btn_gh').textContent = ok ? '✓ Connected' : 'Login with GitHub →';
+  $('btn_start').classList.toggle('hidden', !ok);
+};
+update();
+
+$('inp_gh').onchange = e => { auth.setGitHub(e.target.value); update(); };
+$('inp_cl').onchange = e => auth.setClaude(e.target.value);
+$('btn_start').onclick = () => location.href = 'editor.html';
+
+if (auth.isReady()) location.href = 'editor.html';
+</script>
+</body></html>

@@ -5,67 +5,34 @@
 <link rel="stylesheet" href="styles.css">
 </head><body>
 
-<div class="coord" id="coord">[0,0,0]</div>
-<div class="status" id="status">Ready</div>
-<div class="help">WASD:XY QE:Z ^S:Save ^I:AI</div>
+<div class="page landing">
+  <h1>🧊 Claude Code 3D</h1>
+  <p class="tagline">3D code navigation with embedded AI</p>
 
-<div id="auth" class="modal">
-  <h2>🧊 Claude Code 3D</h2>
-  <p class="repo" id="repo">Repo: detecting...</p>
-
-  <div class="auth-step">
-    <a id="btn_gh" href="#" target="_blank" class="btn-login">Login with GitHub →</a>
+  <div class="features">
+    <div class="feature">📁 Navigate files in 3D space</div>
+    <div class="feature">🤖 Claude AI at every coordinate</div>
+    <div class="feature">⚡ Direct GitHub sync</div>
   </div>
-  <input id="inp_gh" placeholder="paste token & press Enter">
 
-  <p class="optional">Optional: Add AI (requires API key)</p>
-  <input id="inp_cl" placeholder="Claude API key (sk-ant-...)">
+  <nav class="main-nav">
+    <a href="pages/editor.html" class="btn-primary">Open Editor</a>
+    <a href="pages/files.html" class="btn">Browse Files</a>
+    <a href="pages/settings.html" class="btn">Settings</a>
+  </nav>
 
-  <button id="btn_start" class="hidden">Start Coding →</button>
-</div>
-
-<div class="cube">
-  <div class="cell" id="c0"></div>
-  <div class="cell" id="c1"></div>
-  <div class="cell" id="c2"></div>
-  <div class="cell" id="c3"></div>
-  <div class="cell center" id="c4"><textarea id="ed"></textarea></div>
-  <div class="cell" id="c5"></div>
-  <div class="cell" id="c6"></div>
-  <div class="cell" id="c7"></div>
-  <div class="cell" id="c8"></div>
+  <p class="hint" id="status"></p>
 </div>
 
 <script type="module">
-import { App } from './src/app.js';
-const app = new App();
+import { Auth } from './src/auth.js';
+const auth = new Auth();
 
-const $ = id => document.getElementById(id);
-
-// Show detected repo
-const repo = app.auth.getRepo();
-$('repo').textContent = repo ? `Repo: ${repo}` : 'Local mode';
-
-// GitHub login link
-$('btn_gh').href = app.auth.gitHubTokenUrl();
-
-// Update UI based on auth
-const update = () => {
-  const ok = app.auth.hasGitHub();
-  $('inp_gh').classList.toggle('hidden', ok);
-  $('btn_gh').textContent = ok ? '✓ GitHub Connected' : 'Login with GitHub →';
-  $('btn_start').classList.toggle('hidden', !ok);
-};
-update();
-
-// Token inputs
-$('inp_gh').onchange = e => { app.auth.setGitHub(e.target.value); update(); };
-$('inp_cl').onchange = e => { app.auth.setClaude(e.target.value); };
-
-// Start
-$('btn_start').onclick = () => { $('auth').classList.add('hidden'); app.init(); };
-
-// Auto-start if ready
-if (app.auth.isReady()) { $('auth').classList.add('hidden'); app.init(); }
+const status = document.getElementById('status');
+if (auth.isReady()) {
+  status.innerHTML = `✓ Connected to <b>${auth.getRepo()}</b>`;
+} else {
+  status.innerHTML = '<a href="pages/auth.html">Login to get started →</a>';
+}
 </script>
 </body></html>
