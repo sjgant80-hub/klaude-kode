@@ -1,7 +1,6 @@
-// 🔐 Auth - Browser OAuth with auto-detect
+// 🔐 Auth - GitHub OAuth + optional Claude
+const GH_TOKEN = 'https://github.com/settings/tokens/new';
 const GH_OAUTH = 'https://github.com/login/oauth/authorize';
-const GH_TOKEN_URL = 'https://github.com/settings/tokens/new';
-const ANT_CONSOLE = 'https://console.anthropic.com/settings/keys';
 
 export class Auth {
   constructor() {
@@ -14,10 +13,9 @@ export class Auth {
     const cached = this.ls.getItem('gh_repo');
     if (cached) return cached;
 
-    const h = window.location.hostname;
-    const p = window.location.pathname.split('/')[1];
+    const h = location.hostname;
+    const p = location.pathname.split('/')[1];
 
-    // username.github.io/repo-name
     if (h.endsWith('.github.io')) {
       const user = h.replace('.github.io', '');
       const repo = p || `${user}.github.io`;
@@ -27,24 +25,27 @@ export class Auth {
     return null;
   }
 
-  // Auth status
+  // Status - only GitHub required
   hasGitHub() { return !!this.ls.getItem('gh_token'); }
   hasClaude() { return !!this.ls.getItem('ant_key'); }
-  isReady() { return this.hasGitHub() && this.hasClaude(); }
+  isReady() { return this.hasGitHub(); }
   getRepo() { return this.repo; }
 
-  // OAuth URLs
+  // GitHub OAuth URL (needs client_id from OAuth App)
+  gitHubOAuth(clientId) {
+    const state = crypto.randomUUID();
+    this.ls.setItem('gh_state', state);
+    return `${GH_OAUTH}?client_id=${clientId}&scope=repo&state=${state}`;
+  }
+
+  // Fallback: direct token creation
   gitHubTokenUrl() {
-    return `${GH_TOKEN_URL}?scopes=repo&description=Claude-Code-3D`;
+    return `${GH_TOKEN}?scopes=repo&description=Claude-Code-3D`;
   }
-  anthropicUrl() { return ANT_CONSOLE; }
 
-  // Set tokens after OAuth
-  setGitHub(token) { this.ls.setItem('gh_token', token); }
-  setClaude(key) { this.ls.setItem('ant_key', key); }
+  // Set tokens
+  setGitHub(t) { this.ls.setItem('gh_token', t); }
+  setClaude(k) { this.ls.setItem('ant_key', k); }
 
-  // Clear auth
-  logout() {
-    ['gh_token', 'ant_key'].forEach(k => this.ls.removeItem(k));
-  }
+  logout() { this.ls.clear(); }
 }

@@ -14,18 +14,14 @@
   <p class="repo" id="repo">Repo: detecting...</p>
 
   <div class="auth-step">
-    <span class="check" id="chk_gh">○</span>
-    <a id="btn_gh" href="#" target="_blank">Login with GitHub</a>
-    <input id="inp_gh" placeholder="paste token here" class="hidden">
+    <a id="btn_gh" href="#" target="_blank" class="btn-login">Login with GitHub →</a>
   </div>
+  <input id="inp_gh" placeholder="paste token & press Enter">
 
-  <div class="auth-step">
-    <span class="check" id="chk_cl">○</span>
-    <a id="btn_cl" href="#" target="_blank">Get Claude API Key</a>
-    <input id="inp_cl" placeholder="paste key here" class="hidden">
-  </div>
+  <p class="optional">Optional: Add AI (requires API key)</p>
+  <input id="inp_cl" placeholder="Claude API key (sk-ant-...)">
 
-  <button id="btn_save" class="hidden">Start Coding →</button>
+  <button id="btn_start" class="hidden">Start Coding →</button>
 </div>
 
 <div class="cube">
@@ -44,40 +40,32 @@
 import { App } from './src/app.js';
 const app = new App();
 
+const $ = id => document.getElementById(id);
+
 // Show detected repo
 const repo = app.auth.getRepo();
-document.getElementById('repo').textContent = repo ? `Repo: ${repo}` : 'Repo: set manually below';
+$('repo').textContent = repo ? `Repo: ${repo}` : 'Local mode';
 
-// Set OAuth URLs
-document.getElementById('btn_gh').href = app.auth.gitHubTokenUrl();
-document.getElementById('btn_cl').href = app.auth.anthropicUrl();
+// GitHub login link
+$('btn_gh').href = app.auth.gitHubTokenUrl();
 
-// Show/hide based on auth state
-const updateUI = () => {
-  const hasGh = app.auth.hasGitHub();
-  const hasCl = app.auth.hasClaude();
-  document.getElementById('chk_gh').textContent = hasGh ? '✓' : '○';
-  document.getElementById('chk_cl').textContent = hasCl ? '✓' : '○';
-  document.getElementById('inp_gh').classList.toggle('hidden', hasGh);
-  document.getElementById('inp_cl').classList.toggle('hidden', hasCl);
-  document.getElementById('btn_save').classList.toggle('hidden', !(hasGh && hasCl));
+// Update UI based on auth
+const update = () => {
+  const ok = app.auth.hasGitHub();
+  $('inp_gh').classList.toggle('hidden', ok);
+  $('btn_gh').textContent = ok ? '✓ GitHub Connected' : 'Login with GitHub →';
+  $('btn_start').classList.toggle('hidden', !ok);
 };
-updateUI();
+update();
 
-// Save tokens on paste
-document.getElementById('inp_gh').onchange = e => { app.auth.setGitHub(e.target.value); updateUI(); };
-document.getElementById('inp_cl').onchange = e => { app.auth.setClaude(e.target.value); updateUI(); };
+// Token inputs
+$('inp_gh').onchange = e => { app.auth.setGitHub(e.target.value); update(); };
+$('inp_cl').onchange = e => { app.auth.setClaude(e.target.value); };
 
-// Start button
-document.getElementById('btn_save').onclick = () => {
-  document.getElementById('auth').classList.add('hidden');
-  app.init();
-};
+// Start
+$('btn_start').onclick = () => { $('auth').classList.add('hidden'); app.init(); };
 
 // Auto-start if ready
-if (app.auth.isReady()) {
-  document.getElementById('auth').classList.add('hidden');
-  app.init();
-}
+if (app.auth.isReady()) { $('auth').classList.add('hidden'); app.init(); }
 </script>
 </body></html>
